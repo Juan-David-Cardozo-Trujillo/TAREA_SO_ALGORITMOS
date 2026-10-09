@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RTOS | Informe de simulación</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1c2929;
+      --muted: #697978;
+      --paper: #f1f4f1;
+      --surface: #ffffff;
+      --line: #dce4df;
+      --teal: #167c68;
+      --teal-soft: #e5f3ed;
+      --coral: #b34f3c;
+      --coral-soft: #faeae5;
+      --blue: #33718a;
+      --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      --sans: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background-color: var(--paper);
+      background-image: repeating-linear-gradient(135deg, transparent 0 29px, rgb(28 41 41 / 2.5%) 30px 31px);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .masthead {
+      color: #f6f8f5;
+      background-color: #1c2929;
+      background-image: linear-gradient(112deg, #1c2929 0%, #243a39 68%, #28574c 100%);
+      border-bottom: 4px solid #8cbe82;
+    }
+
+    .masthead-inner, main {
+      width: min(1120px, calc(100% - 48px));
+      margin: 0 auto;
+    }
+
+    .masthead-inner { padding: 28px 0 30px; }
+
+    .topline, .report-heading, .section-heading, .core-row, .details summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand, .eyebrow, .section-index, .stamp, .core-name, .metric-label, .meta-label {
+      font-family: var(--mono);
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .brand { font-size: 11px; color: #b7cdc2; }
+    .stamp { font-size: 10px; color: #b7cdc2; }
+    .eyebrow { margin: 38px 0 9px; color: #a6c79e; font-size: 10px; }
+    h1 { margin: 0; font-size: clamp(26px, 3vw, 38px); font-weight: 580; line-height: 1.12; }
+    .lede { max-width: 610px; margin: 12px 0 0; color: #c1cfca; font-size: 14px; }
+
+    main { padding: 24px 0 56px; }
+
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border: 1px solid var(--line);
+      background: rgb(255 255 255 / 82%);
+      margin-bottom: 30px;
+    }
+
+    .metric { padding: 17px 20px; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: 0; }
+    .metric-value { display: block; font-size: 25px; font-weight: 620; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .metric-label { display: block; margin-top: 7px; color: var(--muted); font-size: 9px; }
+
+    .section-heading { margin: 0 0 12px; }
+    .section-heading h2 { margin: 0; font-size: 17px; font-weight: 600; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+    #reports { display: grid; gap: 14px; }
+
+    .scenario {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      animation: arrive 360ms ease-out both;
+    }
+
+    .report-heading { padding: 18px 22px 15px; border-bottom: 1px solid var(--line); }
+    .section-index { display: block; margin-bottom: 4px; color: var(--muted); font-size: 9px; }
+    .scenario h3 { margin: 0; font-size: 16px; font-weight: 610; }
+    .status { flex: 0 0 auto; padding: 5px 9px; font: 600 9px var(--mono); text-transform: uppercase; }
+    .status.ok { color: #12634f; background: var(--teal-soft); }
+    .status.fail { color: #923d2f; background: var(--coral-soft); }
+
+    .scenario-body { display: grid; grid-template-columns: minmax(220px, 0.75fr) minmax(0, 1.5fr); }
+    .scenario-meta { padding: 18px 22px; border-right: 1px solid var(--line); }
+    .meta-label { display: block; margin: 0 0 5px; color: var(--muted); font-size: 9px; }
+    .config { margin: 0 0 17px; font: 11px/1.6 var(--mono); overflow-wrap: anywhere; }
+    .core-list { display: grid; gap: 13px; }
+    .core-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 9px; }
+    .core-name { color: var(--muted); font-size: 9px; }
+    .bar-track { height: 6px; margin-top: 5px; background: #e8eeea; }
+    .bar-fill { height: 100%; background: var(--teal); }
+    .core-row.overloaded .bar-fill { background: var(--coral); }
+    .core-value { font: 10px var(--mono); font-variant-numeric: tabular-nums; }
+    .assignments { display: grid; gap: 6px; margin-top: 18px; }
+    .assignment { margin: 0; color: #485958; font: 10px/1.5 var(--mono); overflow-wrap: anywhere; }
+
+    .scenario-results { padding: 18px 22px; }
+    .result-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .result-cell { padding: 10px 11px; background: #f4f7f4; }
+    .result-number { display: block; font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .result-cell .metric-label { font-size: 8px; }
+    .outcome { margin: 16px 0 0; color: var(--muted); font-size: 12px; }
+    .outcome strong { color: var(--ink); font-weight: 600; }
+
+    .details { border-top: 1px solid var(--line); }
+    .details summary { justify-content: flex-start; padding: 11px 22px; color: var(--blue); cursor: pointer; font-size: 11px; font-weight: 600; list-style: none; }
+    .details summary::-webkit-details-marker { display: none; }
+    .details summary::before { content: "+"; width: 14px; font: 14px var(--mono); }
+    .details[open] summary::before { content: "−"; }
+    .details pre { max-height: 370px; overflow: auto; margin: 0; padding: 15px 22px 19px; border-top: 1px solid var(--line); background: #f7f9f7; color: #394947; font: 10px/1.7 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+    .loading, .error { padding: 30px; border: 1px solid var(--line); background: white; color: var(--muted); }
+    .error { color: var(--coral); }
+    footer { padding-top: 17px; color: var(--muted); font: 9px var(--mono); text-transform: uppercase; }
+
+    @keyframes arrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 720px) {
+      .masthead-inner, main { width: min(100% - 28px, 560px); }
+      .masthead-inner { padding: 19px 0 24px; }
+      .eyebrow { margin-top: 29px; }
+      .stamp { max-width: 125px; text-align: right; line-height: 1.5; }
+      .overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .scenario-body { grid-template-columns: 1fr; }
+      .scenario-meta { border-right: 0; border-bottom: 1px solid var(--line); }
+      .report-heading, .scenario-meta, .scenario-results { padding-left: 16px; padding-right: 16px; }
+      .details summary, .details pre { padding-left: 16px; padding-right: 16px; }
+      .section-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="topline">
+        <span class="brand">RTOS / SIMULATOR</span>
+        <time class="stamp" id="run-date"></time>
+      </div>
+      <p class="eyebrow">Informe de ejecucion / planificacion multinucleo</p>
+      <h1>Resultados de simulacion</h1>
+      <p class="lede">Comparativa de admision, ejecucion y cumplimiento de deadlines en los tres escenarios configurados.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="overview" aria-label="Resumen general">
+      <div class="metric"><span class="metric-value" id="metric-scenarios">3</span><span class="metric-label">escenarios ejecutados</span></div>
+      <div class="metric"><span class="metric-value" id="metric-admitted">-</span><span class="metric-label">conjuntos admitidos</span></div>
+      <div class="metric"><span class="metric-value" id="metric-jobs">-</span><span class="metric-label">trabajos terminados</span></div>
+      <div class="metric"><span class="metric-value" id="metric-misses">-</span><span class="metric-label">deadlines incumplidos</span></div>
+    </section>
+
+    <div class="section-heading">
+      <h2>Detalle por escenario</h2>
+      <p>Uso real por nucleo, trabajos completados y traza de ejecucion.</p>
+    </div>
+    <div id="reports"><div class="loading">Preparando las simulaciones...</div></div>
+    <footer>Simulador RTOS sincronico / reporte generado a partir de la ejecucion</footer>
+  </main>
+
+  <script>
+    const reportsRoot = document.getElementById("reports");
+    document.getElementById("run-date").textContent = new Intl.DateTimeFormat("es", {
+      dateStyle: "medium", timeStyle: "short"
+    }).format(new Date());
+
+    function captureAll(text, expression, mapMatch = match => match[1]) {
+      return [...text.matchAll(expression)].map(mapMatch);
+    }
+
+    function makeScenario(report, index) {
+      const title = report.match(/^>>>\s*(.+)$/m)?.[1] ?? `Escenario ${index + 1}`;
+      const config = report.match(/RTOS SINCR[ÓO]NICO \|[^\n]+/i)?.[0] ?? "Conjunto de tareas no admitido";
+      const rejected = report.includes("NO PLANIFICABLE");
+      const status = rejected ? "No planificable" : "Planificacion completada";
+      const outcome = report.match(/RESULTADO:([^\n]+)/)?.[1]?.trim()
+        ?? report.match(/NO PLANIFICABLE[^\n]*/)?.[0]
+        ?? "La simulacion termino.";
+      const cores = captureAll(report, /^\s*N(\d+): uso real=([\d.]+)% \| terminados=(\d+) \| deadlines incumplidos=(\d+) \| migraciones recibidas=(\d+)/gm,
+        match => ({ id: match[1], utilization: Number(match[2]), completed: Number(match[3]), misses: Number(match[4]), migrations: Number(match[5]) }));
+      const assignments = captureAll(report, /^\s*N\d+\s+U=[^\n]+/gm, match => match[0].trim());
+      const totals = cores.reduce((sum, core) => ({
+        completed: sum.completed + core.completed,
+        misses: sum.misses + core.misses,
+        migrations: sum.migrations + core.migrations
+      }), { completed: 0, misses: 0, migrations: 0 });
+      const attempted = report.match(/U intentada = ([\d.]+)/)?.[1];
+
+      const article = document.createElement("article");
+      article.className = "scenario";
+      article.innerHTML = `
+        <div class="report-heading">
+          <div><span class="section-index">Registro / ${String(index + 1).padStart(2, "0")}</span><h3></h3></div>
+          <span class="status"></span>
+        </div>
+        <div class="scenario-body">
+          <section class="scenario-meta">
+            <span class="meta-label">Configuracion</span><p class="config"></p>
+            <div class="core-list"></div><div class="assignments"></div>
+          </section>
+          <section class="scenario-results">
+            <div class="result-grid">
+              <div class="result-cell"><span class="result-number jobs">-</span><span class="metric-label">trabajos terminados</span></div>
+              <div class="result-cell"><span class="result-number misses">-</span><span class="metric-label">deadlines incumplidos</span></div>
+              <div class="result-cell"><span class="result-number migrations">-</span><span class="metric-label">migraciones</span></div>
+            </div>
+            <p class="outcome"></p>
+          </section>
+        </div>
+        <details class="details"><summary>Ver traza completa por tick</summary><pre></pre></details>`;
+
+      article.querySelector("h3").textContent = title.replace(/^ESCENARIO\s*\d+\s*:\s*/i, "");
+      const badge = article.querySelector(".status");
+      badge.textContent = status;
+      badge.classList.add(rejected ? "fail" : "ok");
+      article.querySelector(".config").textContent = config.replace(/RTOS SINCR[ÓO]NICO \|/i, "").trim();
+      article.querySelector(".jobs").textContent = totals.completed;
+      article.querySelector(".misses").textContent = totals.misses;
+      article.querySelector(".migrations").textContent = totals.migrations;
+      article.querySelector(".outcome").innerHTML = "<strong>Resultado:</strong> ";
+      article.querySelector(".outcome").append(document.createTextNode(outcome));
+      article.querySelector("pre").textContent = report.trim();
+
+      const coreList = article.querySelector(".core-list");
+      cores.forEach(core => {
+        const row = document.createElement("div");
+        row.className = `core-row${core.utilization >= 100 ? " overloaded" : ""}`;
+        row.innerHTML = `<span class="core-name">N${core.id}</span><div class="bar-track"><div class="bar-fill"></div></div><span class="core-value"></span>`;
+        row.querySelector(".bar-fill").style.width = `${Math.max(0, Math.min(100, core.utilization))}%`;
+        row.querySelector(".core-value").textContent = `${core.utilization.toFixed(1)}%`;
+        coreList.append(row);
+      });
+
+      const assignmentList = article.querySelector(".assignments");
+      assignments.forEach(assignment => {
+        const line = document.createElement("p");
+        line.className = "assignment";
+        line.textContent = assignment.replace(/\s+->\s+/, "  /  ");
+        assignmentList.append(line);
+      });
+      if (rejected && attempted) {
+        const attemptedNote = document.createElement("p");
+        attemptedNote.className = "assignment";
+        attemptedNote.textContent = `Utilizacion intentada: ${Number(attempted).toFixed(2)} (${(Number(attempted) * 100).toFixed(1)}%)`;
+        assignmentList.append(attemptedNote);
+      }
+      return { article, rejected, ...totals };
+    }
+
+    function renderReports(reports) {
+      reportsRoot.replaceChildren();
+      const summaries = reports.map(makeScenario);
+      summaries.forEach(summary => reportsRoot.append(summary.article));
+      document.getElementById("metric-scenarios").textContent = summaries.length;
+      document.getElementById("metric-admitted").textContent = summaries.filter(summary => !summary.rejected).length;
+      document.getElementById("metric-jobs").textContent = summaries.reduce((total, summary) => total + summary.completed, 0);
+      document.getElementById("metric-misses").textContent = summaries.reduce((total, summary) => total + summary.misses, 0);
+    }
+
+    function showError(message) {
+      const error = document.createElement("div");
+      error.className = "error";
+      error.textContent = message;
+      reportsRoot.replaceChildren(error);
+    }
+  </script>
+</body>
+</html>
